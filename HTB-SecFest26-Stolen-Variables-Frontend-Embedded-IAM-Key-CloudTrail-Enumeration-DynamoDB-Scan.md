@@ -42,6 +42,8 @@ updated: 2026-10-28T23:41:22.062Z
 > **Scenario Pwned 7/7.** No `HTB{}` string; the room grades seven short-answer questions off three CSV exports. 825 points · very easy · forensics.
 > Three wrong submissions, all on Q6 (§6). Every other flag landed first attempt.
 
+> [!note] Credential values (passwords, access keys, credential hashes) are truncated for publication.
+
 > [!info] Scenario, verbatim
 > The National Immigration & Identity Service runs a public visa-status portal deployed on AWS Amplify. After detecting unusual API activity on one of its IAM users, the security team suspects that credentials embedded in a frontend JavaScript file were harvested and abused by a threat actor. Working as the analyst on Stolen Variables, you will use the provided artifacts to reconstruct the attacker's access timeline and identify what data was reached.
 
@@ -49,9 +51,9 @@ updated: 2026-10-28T23:41:22.062Z
 
 1. Unzipped `SecFest_Stolen_Variables.zip` → `artifacts/` holding three CSVs: `cloudfront-access-logs.csv` (57 rows), `dynamodb.csv` (26 rows, CloudTrail data-event export), `event_history.csv` (576 rows, CloudTrail console management-event export). **No `config.js` is in the download** — Q3's "found in config.js" has to be answered from CloudTrail identity fields and the CloudFront fetch timeline, not from the file itself.
 2. `cut -d, -f16 cloudfront-access-logs.csv | sort | uniq -c` → every request carries `x-host-header` `d209nq8eaf2s88.amplifyapp.com` or `staging.d209nq8eaf2s88.amplifyapp.com`. The Amplify app ID is the hostname label (Q1).
-3. `grep -o 'arn=arn:aws:iam::[0-9]*:user/[^,]*' dynamodb.csv | sort | uniq -c` → two IAM users: `niis-developer-1` (18 events, 2026-03-06, STS session keys) and `niis-amplify-deployer` (8 events, 2026-03-07, long-lived key). The deployer is the exposed user (Q2); its `accesskeyid=AKIA453N4QOMFX23RUOL` is the only `AKIA` key in either CloudTrail export (Q3).
+3. `grep -o 'arn=arn:aws:iam::[0-9]*:user/[^,]*' dynamodb.csv | sort | uniq -c` → two IAM users: `niis-developer-1` (18 events, 2026-03-06, STS session keys) and `niis-amplify-deployer` (8 events, 2026-03-07, long-lived key). The deployer is the exposed user (Q2); its `accesskeyid=AKIA…RUOL` is the only `AKIA` key in either CloudTrail export (Q3).
 4. **Pivot:** `grep 115.166.125.51 cloudfront-access-logs.csv` → that IP browsed `staging.` at 15:32:01–:07 with a Chrome 145 UA and pulled `/app/config.js` four times (three `200`, one `304`). Four minutes later the same IP starts using the `AKIA` key. That timeline is what attributes the key to `config.js`.
-5. `grep AKIA453N4QOMFX23RUOL event_history.csv | cut -d, -f3,7 | sort | head -1` → earliest use `2026-03-07T15:36:18Z` from `115.166.125.51`; all 484 uses of the key come from that one IP (Q4, Q5).
+5. `grep AKIA…RUOL event_history.csv | cut -d, -f3,7 | sort | head -1` → earliest use `2026-03-07T15:36:18Z` from `115.166.125.51`; all 484 uses of the key come from that one IP (Q4, Q5).
 6. `grep 2026-03-07T15:36:18Z event_history.csv | cut -d, -f4,5,9` → **twelve** API calls share the first second. CloudTrail has no sub-second resolution. The accepted answer was the **last row of the tied block in the export** — `ListGraphqlApis` (Q6; see §6 for the three wrong attempts and why).
 7. `grep -o 'tableName=[^,}]*' dynamodb.csv | sort | uniq -c` → one table, `niis-identity-records`; the deployer key's `Scan` against it at `15:53:52` is the final row of the data-event export (Q7).
 8. Confirmed the attacker's successful calls (6 of 484) and the post-enumeration `aws-cli` session to settle "what data was reached" (§4).
@@ -72,7 +74,7 @@ The one structural fact that matters: `event_history.csv` is the console export,
 
 | Population | Rows | Identity | Source | Nature |
 |---|---|---|---|---|
-| Attacker | 484 | `niis-amplify-deployer` / `AKIA453N4QOMFX23RUOL` | `115.166.125.51` | 15:36:18Z → 15:53:31Z, 2026-03-07 |
+| Attacker | 484 | `niis-amplify-deployer` / `AKIA…RUOL` | `115.166.125.51` | 15:36:18Z → 15:53:31Z, 2026-03-07 |
 | Service-linked / AWS-internal | 51 + 34 | empty user or `resource-explorer-2`, `ASIA…` keys | `rds.amazonaws.com`, `resource-explorer-2.amazonaws.com` | `AssumeRole` + one read per service, hourly, both days — noise |
 | Developer | 7 (mgmt) + 18 (data) | `niis-developer-1`, `ASIA…` session keys | `180.244.9.221` | 2026-03-06 14:33–14:34, legitimate table work — pre-incident baseline |
 
@@ -92,7 +94,7 @@ The one structural fact that matters: `event_history.csv` is the console export,
 
 All from `115.166.125.51`, UA `Chrome/145.0.0.0` on Windows 10, against the **`staging.`** branch — the production hostname never served `config.js` to this IP. The other CloudFront visitors (`45.154.98.80`, `178.22.106.230`, `159.89.116.51`, `184.72.29.102`) are WordPress/`wlwmanifest.xml` scanner noise against the production host and are not the attacker.
 
-[Inference] `config.js` held `AKIA453N4QOMFX23RUOL` and its secret. The file is not in the download; the attribution rests on the same IP using the key four minutes later with no other candidate source.
+[Inference] `config.js` held `AKIA…RUOL` and its secret. The file is not in the download; the attribution rests on the same IP using the key four minutes later with no other candidate source.
 
 ## 4. Abuse — CloudTrail, 15:36 → 15:53
 
@@ -106,7 +108,7 @@ All from `115.166.125.51`, UA `Chrome/145.0.0.0` on Windows 10, against the **`s
 15:36:38Z  dynamodb  ListTables
 15:37:10Z  s3        ListBuckets
 15:37:17Z  sts       GetCallerIdentity
-15:37:17Z  sts       GetSessionToken        → ASIA453N4QOMKBM67NC3 (never used)
+15:37:17Z  sts       GetSessionToken        → ASIA…7NC3 (never used)
 ```
 
 **Phase 2 — hands-on-keyboard (15:50:31 → 15:53:52, UA `aws-cli/2.34.4 … os/linux#6.6.87.2-microsoft-standard-WSL2 … md/distrib#ubuntu.24`).** The operator switched to the CLI from an Ubuntu-on-WSL2 box: `GetCallerIdentity` → `ListBuckets` ×3 → `ListTables` ×2 → `Scan niis-identity-records` (`consistentRead=false`, no `limit`). The `Scan` is in `dynamodb.csv` only — data events are not in the management-event export.
@@ -119,9 +121,9 @@ All from `115.166.125.51`, UA `Chrome/145.0.0.0` on Windows 10, against the **`s
 |---|---|---|---|---|
 | 1 | Amplify application ID | `d209nq8eaf2s88` | `cloudfront-access-logs.csv` · `x-host-header` (col 16) | `cut -d, -f16 cloudfront-access-logs.csv \| sort \| uniq -c` |
 | 2 | IAM user whose credentials were exposed | `niis-amplify-deployer` | `dynamodb.csv` · `userIdentity.arn` / `username`; `event_history.csv` · `User name` | `grep -o 'arn=arn:aws:iam::[0-9]*:user/[^,]*' dynamodb.csv \| sort \| uniq -c` |
-| 3 | Access Key ID found in config.js | `AKIA453N4QOMFX23RUOL` | `dynamodb.csv` · `userIdentity.accesskeyid` (+ CloudFront `config.js` timeline, §3) | `grep -o 'accesskeyid=AKIA[A-Z0-9]*' dynamodb.csv \| sort -u` |
-| 4 | Source IP of first use | `115.166.125.51` | `event_history.csv` · `Source IP address` (col 7) | `grep AKIA453N4QOMFX23RUOL event_history.csv \| cut -d, -f7 \| sort \| uniq -c` |
-| 5 | Timestamp of first use | `2026-03-07T15:36:18Z` | `event_history.csv` · `Event time` (col 3) | `grep AKIA453N4QOMFX23RUOL event_history.csv \| cut -d, -f3 \| sort \| head -1` |
+| 3 | Access Key ID found in config.js | `AKIA…RUOL` | `dynamodb.csv` · `userIdentity.accesskeyid` (+ CloudFront `config.js` timeline, §3) | `grep -o 'accesskeyid=AKIA[A-Z0-9]*' dynamodb.csv \| sort -u` |
+| 4 | Source IP of first use | `115.166.125.51` | `event_history.csv` · `Source IP address` (col 7) | `grep AKIA…RUOL event_history.csv \| cut -d, -f7 \| sort \| uniq -c` |
+| 5 | Timestamp of first use | `2026-03-07T15:36:18Z` | `event_history.csv` · `Event time` (col 3) | `grep AKIA…RUOL event_history.csv \| cut -d, -f3 \| sort \| head -1` |
 | 6 | First AWS API call | `ListGraphqlApis` | `event_history.csv` · `Event name` (col 5), **last row of the 15:36:18Z block** | `grep 2026-03-07T15:36:18Z event_history.csv \| cut -d, -f5 \| tail -1` |
 | 7 | DynamoDB table accessed | `niis-identity-records` | `dynamodb.csv` · `requestParameters.tableName` | `grep -o 'tableName=[^,}]*' dynamodb.csv \| sort \| uniq -c` |
 
@@ -167,7 +169,7 @@ grep -o 'accesskeyid=AKIA[A-Z0-9]*'          dynamodb.csv | sort -u
 grep 115.166.125.51 cloudfront-access-logs.csv | cut -d, -f1,2,6,8,9,16 | sort
 
 # Q4 / Q5 — first use of the key
-grep AKIA453N4QOMFX23RUOL event_history.csv | cut -d, -f3,7 | sort | head -1
+grep AKIA…RUOL event_history.csv | cut -d, -f3,7 | sort | head -1
 #   2026-03-07T15:36:18Z,115.166.125.51
 
 # Q6 — the tied first second, export order; accepted answer is the last row
@@ -179,7 +181,7 @@ grep 2026-03-07T15:36:18Z event_history.csv | cut -d, -f5 | tail -1
 grep -o 'tableName=[^,}]*' dynamodb.csv | sort | uniq -c
 
 # Outcome split for the stolen key (6 OK / 394 AccessDenied / 72 UnauthorizedOperation)
-grep AKIA453N4QOMFX23RUOL event_history.csv | awk -F, '$9==""{print $3","$4","$5}' | sort
+grep AKIA…RUOL event_history.csv | awk -F, '$9==""{print $3","$4","$5}' | sort
 ```
 
 `cut -d,` is safe on every column used above; the only comma-bearing cells (`User agent`, `Resources`) sit to the right of them. For anything touching those, use Python's `csv` module — that is how the tie-order test in §6 and the population counts in §2 were run.
@@ -203,7 +205,7 @@ Concepts: cloud credential harvest from static frontends · long-lived (`AKIA`) 
 - **Second:** a deployer key used from a residential/VPS IP (`115.166.125.51`) rather than the Amplify build service. `aws:SourceIp` / `aws:ViaAWSService` conditions on the deployer policy would have denied all 484 calls.
 - **Third:** `userAgent` switching from `aws-sdk-go-v2/1.3.2` to `aws-cli/2.34.4 … WSL2` on the same key within 15 minutes — the SDK-sweep-then-CLI pattern is an operator, not a pipeline.
 - **DynamoDB `Scan` with no `limit` from a principal that has never read the table** — data-event logging on sensitive tables is what made Q7 answerable; without it the exfil is invisible.
-- **The actual fix:** no static credentials in a frontend bundle, ever. Amplify-hosted apps reach backend resources through Cognito identity pools / IAM roles, and a build-time `.env` must never be copied into `public/`. Rotate `AKIA453N4QOMFX23RUOL`, audit `staging.` for other secrets, and scope the deployer to `amplify:*` on its own app only — the sweep shows it also held `dynamodb:ListTables`, `dynamodb:Scan`, and `s3:ListBuckets`.
+- **The actual fix:** no static credentials in a frontend bundle, ever. Amplify-hosted apps reach backend resources through Cognito identity pools / IAM roles, and a build-time `.env` must never be copied into `public/`. Rotate `AKIA…RUOL`, audit `staging.` for other secrets, and scope the deployer to `amplify:*` on its own app only — the sweep shows it also held `dynamodb:ListTables`, `dynamodb:Scan`, and `s3:ListBuckets`.
 - **CloudFront:** `/app/config.js` fetched four times in six seconds by one client with a `304` at the end is a human reading a file, not a page load. Low-signal alone; worth correlating when the same IP hits the API.
 
 ## 11. Method notes
@@ -216,7 +218,7 @@ Concepts: cloud credential harvest from static frontends · long-lived (`AKIA`) 
 ## 12. Open items
 - The enumeration tool behind `aws-sdk-go-v2/1.3.2` was not identified. The alphabetical, ~4-service, ~3-second batch pattern with `sts` pulled to the front is a fingerprint worth matching against known Go AWS enumerators if the room is revisited.
 - Whether the grader keys Q6 to "last row of the tied block" as a rule, or `ListGraphqlApis` was chosen another way, is unconfirmed — one accepted answer, no per-question feedback beyond correct/incorrect.
-- `GetSessionToken` minted `ASIA453N4QOMKBM67NC3` at 15:37:17Z; no later event uses it in either export. Not established whether it was used outside the export window.
+- `GetSessionToken` minted `ASIA…7NC3` at 15:37:17Z; no later event uses it in either export. Not established whether it was used outside the export window.
 - The `Scan` response size is not in the evidence; "full table read" is inferred from the absence of a `limit` parameter, not from `responseElements`.
 
 ## Cross-references

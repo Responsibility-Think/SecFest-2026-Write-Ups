@@ -34,6 +34,7 @@ Nine of the event's 20 challenges, across four of its five categories. **Result:
 
 ## Notes
 
+- **Credentials are truncated.** Passwords, access keys and credential hashes that appear in the evidence are shown truncated (for example `AKIA…RUOL`, `D1…26`), so no complete secret is published. File hashes and other IOCs are shown in full.
 - **Points** are the values recorded at solve time. HTB scores dynamically and the final per-challenge values were not captured; the recorded values sum to 7,925 against the final total of 7,650.
 - **Flags.** Stolen Variables is graded as seven short-answer questions; Leaked's grader asks six questions before returning its flag; every other challenge has one flag. Flags and answers are published because the event has closed.
 - The notes are published as written in an Obsidian vault. `[[wikilinks]]` and callouts render as plain text on GitHub; every link points to another note in this repo.

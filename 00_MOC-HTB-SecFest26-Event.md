@@ -144,4 +144,4 @@ Logics & Business v1 carried more defences than the final patch and failed Verif
 
 ## Change Log
 
-- 2026-11-16 — Created. Result from the HTB certificate of participation and the per-category solve panel; room data from the nine notes' frontmatter, headers and method notes; The Gazorpazorps from the event working notes; host, format and challenge count from the HTB CTF event page.
+- 2026-11-16 — Created. Result from the HTB certificate of participation and the per-category solve panel; room data from the nine notes' frontmatter, headers and method notes; The Gazorpazorps as recorded during the event; host, format and challenge count from the HTB CTF event page.

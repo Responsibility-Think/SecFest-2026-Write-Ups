@@ -262,7 +262,7 @@ Concepts: composition weakness (`SHA256 ∘ f` is only as strong as `f` is injec
 ## 10. Open items
 - [Unverified] The zip member is dated 2023-01-20, which suggests the room was reused from an earlier HTB release. Not checked against HTB's catalog.
 - Whether the live service's wrapper (socat or similar) terminates the server process when the client disconnects, or leaves it in the EOF loop, was not observed.
-- The challenge name is "Me is Mey" on the platform and `crypto_me_is_me` in the handout. The platform spelling is used here per the writeup standard; the "Mey" spelling was not investigated.
+- The challenge name is "Me is Mey" on the platform and `crypto_me_is_me` in the handout. The platform spelling is used here; the "Mey" spelling was not investigated.
 
 ## Cross-references
 - [[HTB-SecFest26-Based0x-Layered-Hex-Base64-Encoding-Reversal]] — SecFest'26 crypto sibling, solved 13 minutes earlier: encoding mistaken for encryption, where this room is hashing mistaken for signing
@@ -270,4 +270,4 @@ Concepts: composition weakness (`SHA256 ∘ f` is only as strong as `f` is injec
 
 ## Change Log
 - 2026-10-29 — Note created. Full solve: handout source verbatim, the bit map of the broken `rotate` with measured preimage classes (64 × 1, 64 × 3), the forgery table and the full count of 59,048 forgeries (all verified), the wrong-domain guard, live-instance handling (http-label mismatch, banner-digest check, EOF loop), the payload and live output, ATT&CK with honest-scope callout, Lockheed Martin Cyber Kill Chain (§7a), fixes and detections, method notes, and open items.
-- 2026-11-15 — OPSEC: analyst-machine paths in Final payload replaced with paths relative to the challenge folder (writeup standard draft v2 §11). `created` and `updated` stamped; they held an unfilled placeholder, and `created` was recovered from the file's ctime. No analytical content changed.
+- 2026-11-15 — OPSEC: analyst-machine paths in Final payload replaced with paths relative to the challenge folder. `created` and `updated` stamped; they held an unfilled placeholder, and `created` was recovered from the file's ctime. No analytical content changed.
